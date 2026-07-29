@@ -104,9 +104,15 @@
         <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
             <!-- Profile Header -->
             <div class="bg-gradient-to-r from-blue-600 to-blue-500 p-6 flex flex-col items-center text-center">
-                <div class="w-28 h-28 rounded-full border-4 border-white shadow-md bg-slate-200 overflow-hidden mb-3 relative flex items-center justify-center bg-white">
-                    <img id="profileImage" src="" alt="Profile" class="w-full h-full object-cover hidden">
-                    <i id="profileFallback" data-lucide="user" class="w-14 h-14 text-slate-400"></i>
+                <div class="relative mb-3">
+                    <div class="w-28 h-28 rounded-full border-4 border-white shadow-md bg-slate-200 overflow-hidden flex items-center justify-center bg-white">
+                        <img id="profileImage" src="" alt="Profile" class="w-full h-full object-cover hidden">
+                        <i id="profileFallback" data-lucide="user" class="w-14 h-14 text-slate-400"></i>
+                    </div>
+                    <button id="editPhotoBtn" type="button" title="Tukar gambar pelajar" class="absolute bottom-0 right-0 bg-blue-600 hover:bg-blue-700 text-white p-1.5 rounded-full shadow-md border-2 border-white transition-colors">
+                        <i data-lucide="pencil" class="w-3 h-3"></i>
+                    </button>
+                    <input type="file" id="editPhotoInput" accept="image/*" class="hidden">
                 </div>
                 <h2 id="studentName" class="text-white font-bold text-xl leading-tight mb-1"></h2>
                 <p id="studentIcDisplay" class="text-blue-100 text-sm font-medium bg-blue-700/30 px-3 py-1 rounded-full"></p>
@@ -158,23 +164,48 @@
 
                 <!-- Waris -->
                 <div class="pb-4 border-b border-slate-100">
-                    <p class="text-xs text-slate-400 uppercase font-bold flex items-center mb-2">
-                        <i data-lucide="user" class="w-3 h-3 mr-1"></i> Waris / Penjaga
-                    </p>
-                    <div class="bg-slate-50 p-3 rounded-lg">
+                    <div class="flex items-center justify-between mb-2">
+                        <p class="text-xs text-slate-400 uppercase font-bold flex items-center">
+                            <i data-lucide="user" class="w-3 h-3 mr-1"></i> Waris / Penjaga
+                        </p>
+                        <button id="editPhoneBtn" type="button" title="Kemaskini no. telefon" class="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                    <div id="warisDisplayBlock" class="bg-slate-50 p-3 rounded-lg">
                         <p id="studentWaris" class="font-semibold text-slate-800">-</p>
                         <p id="studentWarisPhone" class="text-sm text-slate-500 flex items-center mt-1 hidden">
                             <i data-lucide="phone" class="w-3 h-3 mr-1"></i> <span id="warisPhoneText"></span>
                         </p>
                     </div>
+                    <div id="phoneEditBlock" class="hidden bg-blue-50 p-3 rounded-lg space-y-2 border border-blue-100">
+                        <input type="tel" id="editPhone1" placeholder="No. telefon 1 (cth: 0123456789)" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-blue-200">
+                        <input type="tel" id="editPhone2" placeholder="No. telefon 2 (pilihan)" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-blue-200">
+                        <div class="flex gap-2 pt-1">
+                            <button id="savePhoneBtn" type="button" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors">Simpan</button>
+                            <button id="cancelPhoneBtn" type="button" class="px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">Batal</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Alamat -->
                 <div>
-                    <p class="text-xs text-slate-400 uppercase font-bold flex items-center mb-1">
-                        <i data-lucide="map-pin" class="w-3 h-3 mr-1"></i> Alamat
-                    </p>
+                    <div class="flex items-center justify-between mb-1">
+                        <p class="text-xs text-slate-400 uppercase font-bold flex items-center">
+                            <i data-lucide="map-pin" class="w-3 h-3 mr-1"></i> Alamat
+                        </p>
+                        <button id="editAlamatBtn" type="button" title="Kemaskini alamat" class="text-blue-500 hover:text-blue-700 p-1 rounded hover:bg-blue-50">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
                     <p id="studentAddress" class="text-sm text-slate-600 leading-relaxed"></p>
+                    <div id="alamatEditBlock" class="hidden space-y-2 mt-2">
+                        <textarea id="editAlamatInput" rows="3" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 outline-none focus:ring-2 focus:ring-blue-200" placeholder="Alamat penuh"></textarea>
+                        <div class="flex gap-2">
+                            <button id="saveAlamatBtn" type="button" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-lg transition-colors">Simpan</button>
+                            <button id="cancelAlamatBtn" type="button" class="px-3 text-xs font-semibold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">Batal</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -198,6 +229,28 @@
             <p class="text-[10px] text-slate-400 mt-3 text-center italic">
                 * Tekan pada kotak bulan atau pendaftaran untuk melihat baki.
             </p>
+        </div>
+
+        <!-- PAYMENT LOG TABLE -->
+        <div id="paymentLogSection" class="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 hidden">
+            <h3 class="text-slate-800 font-bold mb-4 flex items-center">
+                <i data-lucide="list" class="w-5 h-5 mr-2 text-blue-600"></i>
+                Log Pembayaran
+            </h3>
+            <div class="overflow-x-auto -mx-2">
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="text-slate-400 uppercase border-b border-slate-100">
+                            <th class="p-2">Jenis</th>
+                            <th class="p-2">Tarikh</th>
+                            <th class="p-2">Jumlah</th>
+                            <th class="p-2">Status</th>
+                            <th class="p-2 text-center">Resit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentLogBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- FEES INFO (SEBELAH-SEBELAH) -->
@@ -415,6 +468,11 @@
                     <span id="payBalanceText">Bayar Baki</span>
                 </button>
 
+                <button id="viewReceiptBtn" class="hidden mt-3 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-lg transition-all flex items-center justify-center">
+                    <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+                    <span>Lihat Resit Rasmi</span>
+                </button>
+
                 <button id="closeModalBottomBtn" class="mt-3 w-full py-3 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-all">
                     Tutup
                 </button>
@@ -432,7 +490,7 @@
         // --- CONFIG ---
         // Semua data (semakan yuran, hantar bukti bayaran) sekarang lalu
         // Apps Script (doPost) sahaja — TIADA lagi Publish-to-Web CSV.
-        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbysuhaxApDOb_R9_ZGRqhCQkl7bH0hl1M1NEKojl38ouZg885ijhrkRPCwM5O9_HKklYw/exec";
+        const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzOLFc5O2mMmXBZGV6JC-6qKcy6whAc-EKAiu3h8QsFVNKCIh4SOktlQcrIlocW3WCewQ/exec";
 
         const months = ["Januari", "Februari", "Mac", "April", "Mei", "Jun", "Julai", "Ogos", "September", "Oktober", "November", "Disember"];
 
@@ -511,6 +569,27 @@
 
         const regCardContainer = document.getElementById('regCardContainer');
         const monthGrid = document.getElementById('monthGrid');
+        const viewReceiptBtn = document.getElementById('viewReceiptBtn');
+
+        const paymentLogSection = document.getElementById('paymentLogSection');
+        const paymentLogBody = document.getElementById('paymentLogBody');
+
+        const editPhotoBtn = document.getElementById('editPhotoBtn');
+        const editPhotoInput = document.getElementById('editPhotoInput');
+
+        const editPhoneBtn = document.getElementById('editPhoneBtn');
+        const warisDisplayBlock = document.getElementById('warisDisplayBlock');
+        const phoneEditBlock = document.getElementById('phoneEditBlock');
+        const editPhone1 = document.getElementById('editPhone1');
+        const editPhone2 = document.getElementById('editPhone2');
+        const savePhoneBtn = document.getElementById('savePhoneBtn');
+        const cancelPhoneBtn = document.getElementById('cancelPhoneBtn');
+
+        const editAlamatBtn = document.getElementById('editAlamatBtn');
+        const alamatEditBlock = document.getElementById('alamatEditBlock');
+        const editAlamatInput = document.getElementById('editAlamatInput');
+        const saveAlamatBtn = document.getElementById('saveAlamatBtn');
+        const cancelAlamatBtn = document.getElementById('cancelAlamatBtn');
 
         // --- INIT ---
         window.addEventListener('DOMContentLoaded', () => {
@@ -575,6 +654,7 @@
                     renderProfile();
                     renderGrid();
                     renderFeesInfo();
+                    renderPaymentLog();
 
                     formStudentName.innerText = searchResult['Nama'];
                     formStudentIc.innerText = searchResult['IC'];
@@ -740,8 +820,10 @@
                 regStatus = 'OUTSTANDING';
             }
 
+            const regReceiptLog = studentRegLogs.find(l => (l['VERIFICATION'] || '').toString().toUpperCase() === 'VERIFIED' && l['Resit']);
+            const regReceiptUrl = regReceiptLog ? regReceiptLog['Resit'] : '';
             const regDiv = createCardElement("Pendaftaran", regStatus, true);
-            regDiv.addEventListener('click', () => openModal("Pendaftaran", regStatus, {totalPaid: totalRegPaid, stdFee: stdRegFee, balance: regBalance}));
+            regDiv.addEventListener('click', () => openModal("Pendaftaran", regStatus, {totalPaid: totalRegPaid, stdFee: stdRegFee, balance: regBalance}, regReceiptUrl));
             regCardContainer.appendChild(regDiv);
 
 
@@ -780,8 +862,10 @@
                     status = 'OUTSTANDING';
                 }
 
+                const receiptLog = logs.find(l => (l['VERIFICATION'] || '').toString().toUpperCase() === 'VERIFIED' && l['Resit']);
+                const receiptUrl = receiptLog ? receiptLog['Resit'] : '';
                 const div = createCardElement(month.substring(0,3), status, false);
-                div.addEventListener('click', () => openModal(month, status, {totalPaid, stdFee, balance}));
+                div.addEventListener('click', () => openModal(month, status, {totalPaid, stdFee, balance}, receiptUrl));
                 monthGrid.appendChild(div);
             });
             
@@ -818,7 +902,7 @@
         }
 
         // --- MODAL ---
-        function openModal(item, status, stats) {
+        function openModal(item, status, stats, receiptUrl) {
             modalMonth.innerText = item;
             modalFee.innerText = `RM ${stats.stdFee.toFixed(2)}`;
             modalPaid.innerText = `RM ${stats.totalPaid.toFixed(2)}`;
@@ -835,11 +919,18 @@
                 title = "Sudah Dibayar";
                 text = `<div class="flex items-center justify-center space-x-1 text-green-600 font-bold"><i data-lucide="check-circle-2" class="w-4 h-4"></i><span>VERIFIED</span></div>`;
                 payBalanceBtn.classList.add('hidden');
+                if (receiptUrl) {
+                    viewReceiptBtn.classList.remove('hidden');
+                    viewReceiptBtn.onclick = () => window.open(receiptUrl, '_blank');
+                } else {
+                    viewReceiptBtn.classList.add('hidden');
+                }
             } else if(status === 'AWAITING') {
                 iconHtml = '<div class="w-20 h-20 bg-yellow-100 rounded-full flex items-center justify-center text-yellow-600 shadow-inner"><i data-lucide="clock" class="w-10 h-10"></i></div>';
                 title = "Menunggu Pengesahan";
                 text = `<p class="text-yellow-600 text-sm font-medium">Bayaran diterima, menunggu admin sahkan.</p>`;
                 payBalanceBtn.classList.add('hidden');
+                viewReceiptBtn.classList.add('hidden');
             } else {
                 iconHtml = '<div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center text-red-600 shadow-inner"><i data-lucide="x-circle" class="w-10 h-10"></i></div>';
                 title = "Belum Dijelaskan";
@@ -852,6 +943,7 @@
                     closeModal();
                     document.getElementById('paymentFormSection').scrollIntoView({behavior: 'smooth'});
                 };
+                viewReceiptBtn.classList.add('hidden');
             }
 
             modalIconContainer.innerHTML = iconHtml;
@@ -868,6 +960,169 @@
 
         closeModalBtn.addEventListener('click', closeModal);
         closeModalBottomBtn.addEventListener('click', closeModal);
+
+        // --- LOG PEMBAYARAN (jadual ringkas semua rekod + link Resit Rasmi bila ada) ---
+        function renderPaymentLog() {
+            const combined = studentRegLogs.map(l => Object.assign({}, l, { _type: 'Pendaftaran' }))
+                .concat(studentLogs.map(l => Object.assign({}, l, { _type: 'Bulanan' })));
+
+            combined.sort((a, b) => {
+                const da = new Date((a['Timestamp'] || '').split(' ')[0].split('/').reverse().join('-'));
+                const db = new Date((b['Timestamp'] || '').split(' ')[0].split('/').reverse().join('-'));
+                return db - da;
+            });
+
+            if (combined.length === 0) {
+                paymentLogSection.classList.add('hidden');
+                paymentLogBody.innerHTML = '';
+                return;
+            }
+
+            paymentLogBody.innerHTML = combined.map(l => {
+                const status = (l['VERIFICATION'] || 'PENDING').toString().toUpperCase();
+                const statusClass = status === 'VERIFIED' ? 'bg-green-100 text-green-700' : (status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700');
+                const jenis = l['_type'] === 'Pendaftaran' ? 'Pendaftaran' : (l['BULAN'] || l['Bulan'] || 'Bulanan');
+                const jumlah = parseCurrency(l['JUMLAH BAYARAN'] || l['Jumlah Bayaran']);
+                const resitUrl = l['Resit'] || '';
+                const resitCell = resitUrl
+                    ? `<a href="${resitUrl}" target="_blank" class="text-emerald-600 hover:text-emerald-800"><i data-lucide="file-check" class="w-4 h-4 inline"></i></a>`
+                    : '<span class="text-slate-300">-</span>';
+                return `<tr>
+                    <td class="p-2">${jenis}</td>
+                    <td class="p-2 text-slate-500">${(l['Timestamp'] || '-').split(' ')[0]}</td>
+                    <td class="p-2 font-semibold">RM ${jumlah.toFixed(2)}</td>
+                    <td class="p-2"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusClass}">${status}</span></td>
+                    <td class="p-2 text-center">${resitCell}</td>
+                </tr>`;
+            }).join('');
+
+            paymentLogSection.classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        editPhotoBtn.addEventListener('click', () => editPhotoInput.click());
+
+        editPhotoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Fail terlalu besar (Max 5MB).');
+                editPhotoInput.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64 = reader.result.split(',')[1];
+                editPhotoBtn.disabled = true;
+                try {
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'UPDATE_PARENT_CONTACT',
+                            ic: searchResult['IC'],
+                            photoBase64: base64,
+                            photoMimeType: file.type,
+                            photoFilename: file.name
+                        })
+                    });
+                    const result = await response.json();
+                    if (result.result === 'success') {
+                        searchResult['Gambar Pelajar'] = result.photoUrl || searchResult['Gambar Pelajar'];
+                        renderProfile();
+                    } else {
+                        alert(result.message || 'Gagal kemaskini gambar.');
+                    }
+                } catch (err) {
+                    alert('Ralat menyambung ke server.');
+                } finally {
+                    editPhotoBtn.disabled = false;
+                    editPhotoInput.value = '';
+                }
+            };
+            reader.readAsDataURL(file);
+        });
+
+        editPhoneBtn.addEventListener('click', () => {
+            const phones = parsePhoneNumbers(searchResult['No Tel Waris']);
+            editPhone1.value = phones[0] || '';
+            editPhone2.value = phones[1] || '';
+            warisDisplayBlock.classList.add('hidden');
+            phoneEditBlock.classList.remove('hidden');
+        });
+
+        cancelPhoneBtn.addEventListener('click', () => {
+            phoneEditBlock.classList.add('hidden');
+            warisDisplayBlock.classList.remove('hidden');
+        });
+
+        savePhoneBtn.addEventListener('click', async () => {
+            const p1 = editPhone1.value.replace(/[^0-9]/g, '').trim();
+            const p2 = editPhone2.value.replace(/[^0-9]/g, '').trim();
+            if (!p1) {
+                alert('Sila isi sekurang-kurangnya satu nombor telefon.');
+                return;
+            }
+            const noTelWaris = p2 ? JSON.stringify([p1, p2]) : p1;
+            savePhoneBtn.disabled = true;
+            savePhoneBtn.innerText = 'Menyimpan...';
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'UPDATE_PARENT_CONTACT', ic: searchResult['IC'], noTelWaris: noTelWaris })
+                });
+                const result = await response.json();
+                if (result.result === 'success') {
+                    searchResult['No Tel Waris'] = noTelWaris;
+                    renderProfile();
+                    phoneEditBlock.classList.add('hidden');
+                    warisDisplayBlock.classList.remove('hidden');
+                } else {
+                    alert(result.message || 'Gagal kemaskini no. telefon.');
+                }
+            } catch (err) {
+                alert('Ralat menyambung ke server.');
+            } finally {
+                savePhoneBtn.disabled = false;
+                savePhoneBtn.innerText = 'Simpan';
+            }
+        });
+
+        editAlamatBtn.addEventListener('click', () => {
+            editAlamatInput.value = searchResult['Alamat'] || '';
+            studentAddress.classList.add('hidden');
+            alamatEditBlock.classList.remove('hidden');
+        });
+
+        cancelAlamatBtn.addEventListener('click', () => {
+            alamatEditBlock.classList.add('hidden');
+            studentAddress.classList.remove('hidden');
+        });
+
+        saveAlamatBtn.addEventListener('click', async () => {
+            const alamat = editAlamatInput.value.trim();
+            saveAlamatBtn.disabled = true;
+            saveAlamatBtn.innerText = 'Menyimpan...';
+            try {
+                const response = await fetch(APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'UPDATE_PARENT_CONTACT', ic: searchResult['IC'], alamat: alamat })
+                });
+                const result = await response.json();
+                if (result.result === 'success') {
+                    searchResult['Alamat'] = alamat;
+                    renderProfile();
+                    alamatEditBlock.classList.add('hidden');
+                    studentAddress.classList.remove('hidden');
+                } else {
+                    alert(result.message || 'Gagal kemaskini alamat.');
+                }
+            } catch (err) {
+                alert('Ralat menyambung ke server.');
+            } finally {
+                saveAlamatBtn.disabled = false;
+                saveAlamatBtn.innerText = 'Simpan';
+            }
+        });
 
         // --- FILE HANDLING (BASE64) ---
         formFile.addEventListener('change', (e) => {
