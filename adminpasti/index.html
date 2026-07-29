@@ -109,7 +109,7 @@
         // SEMUA data (login, senarai pelajar, transaksi) sekarang lalu
         // Apps Script (doPost) sahaja — TIADA lagi Publish-to-Web CSV.
         // Tukar URL di bawah ikut deployment Code.gs baharu anda.
-        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbysuhaxApDOb_R9_ZGRqhCQkl7bH0hl1M1NEKojl38ouZg885ijhrkRPCwM5O9_HKklYw/exec';
+        const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOLFc5O2mMmXBZGV6JC-6qKcy6whAc-EKAiu3h8QsFVNKCIh4SOktlQcrIlocW3WCewQ/exec';
         const SESSION_STORAGE_KEY = 'tp_session';
 
         // --- CONFIG UNTUK DATABASE EXPORT ---
@@ -259,6 +259,13 @@
             const [loadingGuru, setLoadingGuru] = useState(false);
             const [savingGuru, setSavingGuru] = useState(false);
             const [deletingGuruId, setDeletingGuruId] = useState(null);
+            const [deletingStudentIC, setDeletingStudentIC] = useState(null);
+            const [viewingFileUrl, setViewingFileUrl] = useState(null);
+            const [viewingFileTitle, setViewingFileTitle] = useState('');
+            const [whatsappModalStudent, setWhatsappModalStudent] = useState(null);
+            const [whatsappSelectedMonths, setWhatsappSelectedMonths] = useState([]);
+            const [whatsappIncludeReg, setWhatsappIncludeReg] = useState(false);
+            const [whatsappPhoneChoice, setWhatsappPhoneChoice] = useState(0);
             const [guruFormError, setGuruFormError] = useState('');
             const [guruFormSuccess, setGuruFormSuccess] = useState('');
             const [guruForm, setGuruForm] = useState({ id: '', nama: '', noTelefon: '', cawangan: '', kelas: '' });
@@ -822,6 +829,31 @@
                 }
             };
 
+            // Padam SATU rekod pelajar (cth: pelajar berpindah/berhenti). Rekod
+            // transaksi lama pelajar tu KEKAL (audit trail kewangan) — hanya
+            // profil di Database Pelajar yang hilang. Rujuk handleDeleteStudent_.
+            const deleteStudent = async (student) => {
+                if (!window.confirm(`Padam rekod pelajar "${student.Nama}"? Rekod transaksi lama pelajar ini akan KEKAL, cuma profil di Database Pelajar akan hilang. Tindakan ni tak boleh diundur.`)) return;
+
+                setDeletingStudentIC(student.IC);
+                try {
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'DELETE_STUDENT', token: currentUser.token, ic: student.IC })
+                    });
+                    const result = await response.json();
+                    if (result.result === 'success') {
+                        fetchData();
+                    } else {
+                        alert(result.message || 'Gagal memadam pelajar.');
+                    }
+                } catch (err) {
+                    alert('Ralat menyambung ke server.');
+                } finally {
+                    setDeletingStudentIC(null);
+                }
+            };
+
             // --- Muat Naik Pukal (CSV) ---
             const csvEscape = (val) => {
                 const str = String(val === undefined || val === null ? '' : val);
@@ -1158,23 +1190,65 @@
                 return url;
             };
 
-            const sendWhatsAppReminder = (student) => {
+            // Drive "view" link -> embeddable "preview" iframe link. Drive punya
+            // preview endpoint sendiri kendali imej/PDF secara generik (tak perlu
+            // teka jenis fail di client) — dipakai untuk modal Lihat Resit di bawah.
+            const getFileEmbedUrl = (url) => {
+                if (!url) return null;
+                const match = url.match(/(?:\/d\/|id=)([-\w]+)/);
+                if (match && match[1]) return `https://drive.google.com/file/d/${match[1]}/preview`;
+                return url;
+            };
+
+            const MONTHS_12 = ["Januari","Februari","Mac","April","Mei","Jun","Julai","Ogos","September","Oktober","November","Disember"];
+
+            // Buka modal pilihan WhatsApp (nombor + bulan/pendaftaran) — GANTI
+            // hantar-terus-ke-phones[0] sebelum ini, sekarang admin pilih dulu.
+            const openWhatsappModal = (student) => {
+                setWhatsappModalStudent(student);
+                setWhatsappSelectedMonths([]);
+                setWhatsappIncludeReg(false);
+                setWhatsappPhoneChoice(0);
+            };
+
+            // Tanda visual sahaja (bukan block) — bantu admin tengok bulan mana
+            // dah ada rekod bayaran VERIFIED sebelum tick untuk reminder.
+            const isMonthPaid = (student, month) => {
+                return (student.transactions || []).some(t => t._type === 'Bulanan' && t['BULAN'] === month && t['VERIFICATION'] === 'VERIFIED');
+            };
+
+            const toggleWhatsappMonth = (month) => {
+                setWhatsappSelectedMonths(prev => prev.includes(month) ? prev.filter(m => m !== month) : [...prev, month]);
+            };
+
+            const sendWhatsappCustom = () => {
+                const student = whatsappModalStudent;
+                if (!student) return;
                 const phones = parsePhoneNumbers(student['No Tel Waris']);
-                const phone = phones[0];
-                if (!phone) {
-                    alert("Nombor telefon waris tiada.");
-                    return;
-                }
+                const phone = phones[whatsappPhoneChoice] || phones[0];
+                if (!phone) { alert('Nombor telefon waris tiada.'); return; }
                 let cleanPhone = phone.toString().replace(/[^0-9]/g, '');
                 if (cleanPhone.startsWith('0')) cleanPhone = '60' + cleanPhone.substring(1);
 
-                let message = "";
-                if (student.currentBalance > 0) {
-                    message = `Assalamualaikum dan salam sejahtera En/Cik ${student['Nama Waris'] || ''}\n\nBerikut merupakan baki tertunggak yang perlu dibayar bagi *${student.Nama}*:\n\n*Jumlah Tertunggak: ${formatRM(student.currentBalance)}*\n------------------------------\nPecahan Baki:\n• Baki Pendaftaran: ${formatRM(student.balReg)}\n• Baki Bulanan: ${formatRM(student.balMonthly)}\n\nMohon jelaskan bayaran secepat mungkin. Terima kasih.`;
-                } else {
-                    message = `Assalamualaikum dan salam sejahtera En/Cik ${student['Nama Waris'] || ''}\n\nPihak Tadika ingin merakamkan ucapan *TAHNIAH dan TERIMA KASIH* atas komitmen tuan/puan menyelesaikan pembayaran yuran bagi anak anda, *${student.Nama}*.\n\nSokongan anda amat kami hargai. Terima kasih.`;
+                if (whatsappSelectedMonths.length === 0 && !whatsappIncludeReg) {
+                    alert('Sila pilih sekurang-kurangnya satu bulan atau Yuran Pendaftaran.');
+                    return;
                 }
+
+                const monthlyFee = parseFloat((student['Yuran Bulanan'] || '0').toString().replace(/[^0-9.-]+/g, '')) || 0;
+                const regFee = whatsappIncludeReg ? (student.balReg > 0 ? student.balReg : 0) : 0;
+                const monthsTotal = whatsappSelectedMonths.length * monthlyFee;
+                const total = monthsTotal + regFee;
+
+                let itemsList = whatsappSelectedMonths.map(m => `• Yuran Bulanan (${m}): ${formatRM(monthlyFee)}`).join('\n');
+                if (whatsappIncludeReg) {
+                    itemsList += (itemsList ? '\n' : '') + `• Yuran Pendaftaran: ${formatRM(regFee)}`;
+                }
+
+                const message = `Assalamualaikum dan salam sejahtera En/Cik ${student['Nama Waris'] || ''}\n\nBerikut merupakan baki tertunggak yang perlu dibayar bagi *${student.Nama}*:\n\n${itemsList}\n------------------------------\n*Jumlah Keseluruhan: ${formatRM(total)}*\n\nMohon jelaskan bayaran secepat mungkin. Terima kasih.`;
+
                 window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+                setWhatsappModalStudent(null);
             };
 
             const toggleColumn = (id) => {
@@ -1234,7 +1308,7 @@
                 const headers = EXPORT_COLUMNS.filter(c => exportCols.includes(c.id)).map(c => c.label);
                 const rows = data.map(obj => Object.values(obj));
                 doc.setFontSize(18);
-                doc.text("Database Pelajar - Tadika Pintar", 14, 20);
+                doc.text("Database Pelajar - Pengurusan PASTI", 14, 20);
                 doc.setFontSize(10);
                 doc.text(`Tarikh Dijana: ${new Date().toLocaleDateString('ms-MY')}`, 14, 28);
                 doc.text(`Jumlah Rekod: ${rows.length}`, 14, 33);
@@ -1287,7 +1361,7 @@
                             <div className="w-20 h-20 rounded-full mx-auto mb-4 shadow-lg shadow-slate-200 bg-white flex items-center justify-center overflow-hidden border border-slate-100">
                                 <img src="icons/logo-master.png" alt="Logo PASTI" className="w-full h-full object-contain p-1" />
                             </div>
-                            <h1 className="text-3xl font-bold text-slate-800">Sistem Tadika Pintar</h1>
+                            <h1 className="text-3xl font-bold text-slate-800">Sistem Pengurusan PASTI</h1>
                             <p className="text-slate-500 mt-2 font-medium">Log Masuk Admin Pentadbir</p>
                         </div>
                         <form onSubmit={handleLogin} className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 w-full max-w-sm space-y-6">
@@ -1330,7 +1404,7 @@
                                 <img src="icons/logo-master.png" alt="Logo PASTI" className="w-full h-full object-contain p-0.5" />
                             </div>
                             <div>
-                                <h1 className="font-bold text-slate-800 text-lg">Tadika Pintar</h1>
+                                <h1 className="font-bold text-slate-800 text-lg">Pengurusan PASTI</h1>
                                 <p className="text-xs text-sky-600 font-bold">{currentUser.Role.toLowerCase() === 'superadmin' ? 'Super Admin' : `Admin ${currentUser.Cawangan}`}</p>
                             </div>
                         </div>
@@ -1386,7 +1460,7 @@
                         <div className="md:hidden flex items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm">
                              <div className="flex items-center gap-2">
                                 <img src="icons/logo-master.png" alt="Logo PASTI" className="w-6 h-6 object-contain" />
-                                <span className="font-bold text-slate-700">Tadika Pintar</span>
+                                <span className="font-bold text-slate-700">Pengurusan PASTI</span>
                              </div>
                              <div className="flex gap-2">
                                 <button onClick={() => setView('dashboard')} className="p-2 bg-slate-100 rounded-lg">
@@ -1537,9 +1611,18 @@
                                                             <tr key={idx} className="hover:bg-slate-50 transition">
                                                                 <td className="p-2 text-xs text-slate-400 align-top">{idx + 1}</td>
                                                                 <td className="p-2 align-top">
-                                                                    <button onClick={() => openEditStudentForm(student)} className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 font-semibold transition flex items-center gap-1">
-                                                                        <Icon name="pencil" size={12} /> Edit
-                                                                    </button>
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <button onClick={() => openEditStudentForm(student)} className="text-xs px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-600 font-semibold transition flex items-center gap-1">
+                                                                            <Icon name="pencil" size={12} /> Edit
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => deleteStudent(student)}
+                                                                            disabled={deletingStudentIC === student.IC}
+                                                                            className="text-xs px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                                                        >
+                                                                            <Icon name="trash-2" size={12} /> {deletingStudentIC === student.IC ? '...' : 'Delete'}
+                                                                        </button>
+                                                                    </div>
                                                                 </td>
                                                                 {EXPORT_COLUMNS.filter(c => exportCols.includes(c.id)).map(col => {
                                                                     let val = student[col.id];
@@ -1936,7 +2019,7 @@
                                             
                                             {/* Butang WhatsApp */}
                                             <div 
-                                                onClick={() => sendWhatsAppReminder(selectedStudent)} 
+                                                onClick={() => openWhatsappModal(selectedStudent)} 
                                                 className={`p-4 rounded-xl border shadow-sm cursor-pointer transition group relative ${selectedStudent.currentBalance > 0 ? 'bg-white border-slate-200 hover:border-sky-300' : 'bg-emerald-50 border-emerald-200'}`}
                                             >
                                                 <p className="text-xs text-slate-400 uppercase font-bold">
@@ -1991,9 +2074,14 @@
                                                                         {tx.VERIFICATION || 'PENDING'}
                                                                     </span>
                                                                     {tx['BUKTI TRANSAKSI'] && (
-                                                                        <a href={tx['BUKTI TRANSAKSI']} target="_blank" className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200">
-                                                                            Lihat Resit
-                                                                        </a>
+                                                                        <button type="button" onClick={() => { setViewingFileUrl(tx['BUKTI TRANSAKSI']); setViewingFileTitle('Bukti Transaksi'); }} className="text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 hover:bg-sky-200">
+                                                                            Lihat Bukti
+                                                                        </button>
+                                                                    )}
+                                                                    {tx['Resit'] && (
+                                                                        <button type="button" onClick={() => { setViewingFileUrl(tx['Resit']); setViewingFileTitle('Resit Rasmi'); }} className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-200">
+                                                                            Resit Rasmi
+                                                                        </button>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -2107,12 +2195,20 @@
                                                             </td>
 
                                                             <td className="p-4 text-center">
-                                                                {tx['BUKTI TRANSAKSI'] ? (
-                                                                    <a href={tx['BUKTI TRANSAKSI']} target="_blank" className="text-sky-500 hover:text-sky-700 flex flex-col items-center justify-center">
-                                                                        <Icon name="file-text" size={20} className="mx-auto" />
-                                                                        <span className="text-[10px] mt-1">Lihat</span>
-                                                                    </a>
-                                                                ) : <span className="text-slate-300">-</span>}
+                                                                <div className="flex items-center justify-center gap-2">
+                                                                    {tx['BUKTI TRANSAKSI'] ? (
+                                                                        <button type="button" onClick={() => { setViewingFileUrl(tx['BUKTI TRANSAKSI']); setViewingFileTitle('Bukti Transaksi'); }} className="text-sky-500 hover:text-sky-700 flex flex-col items-center justify-center">
+                                                                            <Icon name="file-text" size={20} className="mx-auto" />
+                                                                            <span className="text-[10px] mt-1">Lihat</span>
+                                                                        </button>
+                                                                    ) : <span className="text-slate-300">-</span>}
+                                                                    {tx['Resit'] && (
+                                                                        <button type="button" onClick={() => { setViewingFileUrl(tx['Resit']); setViewingFileTitle('Resit Rasmi'); }} className="text-emerald-600 hover:text-emerald-800 flex flex-col items-center justify-center">
+                                                                            <Icon name="file-check-2" size={20} className="mx-auto" />
+                                                                            <span className="text-[10px] mt-1">Resit</span>
+                                                                        </button>
+                                                                    )}
+                                                                </div>
                                                             </td>
                                                         </tr>
                                                     );
@@ -2675,10 +2771,95 @@
                         )}
 
                         <footer className="mt-12 text-center text-slate-400 text-sm pb-8">
-                            &copy; 2026 Tadika Pintar System. All rights reserved.
+                            &copy; 2026 Sistem Pengurusan PASTI Lembah Pantai
                         </footer>
 
                     </main>
+
+                    {/* MODAL: Lihat fail (Bukti Transaksi / Resit Rasmi) — popup dalam
+                        aplikasi, bukan tab baharu, supaya admin tak perlu tinggalkan
+                        skrin sedia ada. */}
+                    {viewingFileUrl && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60" onClick={() => setViewingFileUrl(null)}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                                <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                                    <h3 className="font-bold text-slate-800">{viewingFileTitle}</h3>
+                                    <button onClick={() => setViewingFileUrl(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded-full hover:bg-slate-100">
+                                        <Icon name="x" size={20} />
+                                    </button>
+                                </div>
+                                <div className="flex-1 bg-slate-50 flex items-center justify-center p-2">
+                                    <iframe src={getFileEmbedUrl(viewingFileUrl)} className="w-full h-[70vh] rounded-lg border-0" title={viewingFileTitle}></iframe>
+                                </div>
+                                <div className="p-3 border-t border-slate-100 text-center">
+                                    <a href={viewingFileUrl} target="_blank" className="text-xs text-sky-600 hover:underline">Buka dalam tab baharu</a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MODAL: Hantar Peringatan WhatsApp — pilih nombor + bulan/pendaftaran */}
+                    {whatsappModalStudent && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60" onClick={() => setWhatsappModalStudent(null)}>
+                            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                                <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+                                    <h3 className="font-bold text-slate-800">Hantar Peringatan WhatsApp</h3>
+                                    <button onClick={() => setWhatsappModalStudent(null)} className="text-slate-400 hover:text-slate-600">
+                                        <Icon name="x" size={20} />
+                                    </button>
+                                </div>
+                                <div className="p-5 space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 mb-2">Hantar ke nombor</label>
+                                        <div className="space-y-2">
+                                            {parsePhoneNumbers(whatsappModalStudent['No Tel Waris']).map((p, i) => (
+                                                <label key={i} className="flex items-center gap-2 text-sm text-slate-700">
+                                                    <input type="radio" name="waPhone" checked={whatsappPhoneChoice === i} onChange={() => setWhatsappPhoneChoice(i)} />
+                                                    {p}
+                                                </label>
+                                            ))}
+                                            {parsePhoneNumbers(whatsappModalStudent['No Tel Waris']).length === 0 && (
+                                                <p className="text-xs text-rose-500">Tiada nombor telefon waris direkodkan.</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className="flex items-center gap-2 text-sm text-slate-700">
+                                            <input type="checkbox" checked={whatsappIncludeReg} onChange={(e) => setWhatsappIncludeReg(e.target.checked)} />
+                                            Sertakan Yuran Pendaftaran (Baki: {formatRM(whatsappModalStudent.balReg || 0)})
+                                        </label>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-600 mb-2">Bulan tertunggak (boleh pilih lebih dari satu)</label>
+                                        <div className="grid grid-cols-4 gap-2">
+                                            {MONTHS_12.map(m => {
+                                                const paid = isMonthPaid(whatsappModalStudent, m);
+                                                const selected = whatsappSelectedMonths.includes(m);
+                                                return (
+                                                    <label key={m} className={`flex items-center justify-center gap-1 text-xs px-2 py-1.5 rounded-lg border cursor-pointer transition ${selected ? 'bg-sky-50 border-sky-300 text-sky-700 font-semibold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                                        <input type="checkbox" checked={selected} onChange={() => toggleWhatsappMonth(m)} className="hidden" />
+                                                        {m.substring(0,3)}
+                                                        {paid && <Icon name="check" size={10} className="text-emerald-500" />}
+                                                    </label>
+                                                );
+                                            })}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 mt-2">Tanda ✓ hijau = ada rekod bayaran VERIFIED untuk bulan tu — semak dulu sebelum pilih untuk reminder.</p>
+                                    </div>
+                                </div>
+                                <div className="p-5 border-t border-slate-100 flex gap-2">
+                                    <button onClick={sendWhatsappCustom} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl shadow-sm transition flex items-center justify-center gap-2">
+                                        <Icon name="send" size={16} /> Hantar WhatsApp
+                                    </button>
+                                    <button onClick={() => setWhatsappModalStudent(null)} className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition text-sm font-semibold">
+                                        Batal
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         };
